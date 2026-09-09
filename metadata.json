@@ -1,0 +1,6 @@
+{
+  "name": "AI Marketing Operating System",
+  "description": "A full-scale digital marketing agency powered by specialized AI agents. Analyze any website URL to generate custom SEO audits, content strategies, social media calendars, ad campaigns, lead funnels, and email sequences, then collaborate with individual agent experts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

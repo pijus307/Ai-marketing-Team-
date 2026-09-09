@@ -1,0 +1,258 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Base Dark & Glass Theme Styling */
+body {
+  background-color: #060810;
+  color: #f3f4f6;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Surface Utilities */
+.glass-panel {
+  background: rgba(13, 17, 30, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(20, 26, 46, 0.8);
+  border-color: rgba(56, 189, 248, 0.25);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5), 0 0 20px 0 rgba(56, 189, 248, 0.15);
+  transform: translateY(-2px);
+}
+
+.glass-card {
+  background: rgba(18, 24, 40, 0.55);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 25px -5px rgba(0, 240, 255, 0.3);
+}
+
+.glow-purple {
+  box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.35);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.3);
+}
+
+.gradient-text-cyan-purple {
+  background: linear-gradient(135deg, #00f0ff 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-silver {
+  background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-border-mask {
+  position: relative;
+}
+
+.gradient-border-mask::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.4), rgba(139, 92, 246, 0.4), rgba(255, 255, 255, 0.05));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Custom Sleek Dark Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(6, 8, 16, 0.8);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.4);
+}
+
+/* Spatial & 3D Utilities */
+@utility perspective-1000 {
+  perspective: 1000px;
+}
+@utility perspective-2000 {
+  perspective: 2000px;
+}
+@utility preserve-3d {
+  transform-style: preserve-3d;
+}
+@utility backface-hidden {
+  backface-visibility: hidden;
+}
+
+.premium-3d-card {
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  box-shadow: 
+    0 10px 30px -10px rgba(0, 0, 0, 0.5),
+    0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.premium-3d-card:hover {
+  transform: translateY(-4px) rotateX(4deg) rotateY(-2deg) translateZ(10px);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.7),
+    0 0 25px 0 rgba(56, 189, 248, 0.15);
+}
+
+@keyframes float3d {
+  0%, 100% {
+    transform: translateY(0px) rotateY(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotateY(2deg);
+  }
+}
+
+.animate-float-3d {
+  animation: float3d 6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s infinite;
+}
+
+/* ==========================================================================
+   PRINT-TO-PDF STYLING (Preserving Glassmorphism Aesthetic)
+   ========================================================================== */
+@media print {
+  @page {
+    size: auto;
+    margin: 12mm 12mm 12mm 12mm;
+  }
+
+  /* Force background colors and glass border rendering */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  html,
+  body {
+    background: #060810 !important;
+    color: #f1f5f9 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Hide navigation, 3D canvases, interactive controls, and utility bars */
+  header,
+  nav,
+  aside,
+  .no-print,
+  button:not(.force-print),
+  canvas,
+  .futuristic-bg,
+  [role="dialog"] {
+    display: none !important;
+  }
+
+  /* Remove layout constraints so the report prints cleanly */
+  main,
+  #root,
+  .min-h-screen,
+  .lg\:grid-cols-4,
+  .lg\:col-span-3 {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  /* Glass panels in print mode */
+  .glass-panel,
+  .glass-card,
+  .gradient-border-mask {
+    background: #0d1222 !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Avoid cutting cards across pages */
+  .page-break-inside-avoid,
+  .glass-panel,
+  .glass-card,
+  tr,
+  .grid > div {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Headings typography */
+  h1, h2, h3, h4 {
+    color: #ffffff !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* Ensure text colors stay legible */
+  .text-white { color: #ffffff !important; }
+  .text-slate-300, .text-zinc-300 { color: #cbd5e1 !important; }
+  .text-slate-400, .text-zinc-400, .text-zinc-500 { color: #94a3b8 !important; }
+  .text-cyan-400, .text-cyan-300 { color: #38bdf8 !important; }
+  .text-emerald-400, .text-emerald-300 { color: #34d399 !important; }
+  .text-amber-400, .text-amber-300 { color: #fbbf24 !important; }
+  .text-rose-400, .text-rose-300 { color: #f87171 !important; }
+  .text-purple-400, .text-purple-300 { color: #c084fc !important; }
+  .text-sky-400, .text-sky-300 { color: #38bdf8 !important; }
+
+  /* Utility to show elements only during print */
+  .print-only {
+    display: block !important;
+  }
+
+  .print-flex {
+    display: flex !important;
+  }
+}
+
+
