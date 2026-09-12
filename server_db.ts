@@ -203,3 +203,114 @@ export function saveProvider(
   writeRows(rows);
   return resultRow;
 }
+
+export interface ToolIntegrationRow {
+  id: string;
+  user_id: string;
+  tool_id: string;
+  status: 'connected' | 'disconnected' | 'syncing' | 'error';
+  config_encrypted: string; // JSON encrypted
+  last_sync: string;
+  synced_metrics_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+const TOOLS_DB_PATH = path.join(process.cwd(), 'data', 'tool_integrations_db.json');
+
+function ensureToolsDb() {
+  const dir = path.dirname(TOOLS_DB_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  if (!fs.existsSync(TOOLS_DB_PATH)) {
+    fs.writeFileSync(TOOLS_DB_PATH, JSON.stringify([], null, 2), 'utf8');
+  }
+}
+
+export function getAllToolRows(): ToolIntegrationRow[] {
+  ensureToolsDb();
+  try {
+    const data = fs.readFileSync(TOOLS_DB_PATH, 'utf8');
+    return JSON.parse(data) as ToolIntegrationRow[];
+  } catch (e) {
+    console.error('Failed to read tools db file', e);
+    return [];
+  }
+}
+
+export function writeToolRows(rows: ToolIntegrationRow[]) {
+  ensureToolsDb();
+  try {
+    fs.writeFileSync(TOOLS_DB_PATH, JSON.stringify(rows, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Failed to write to tools db file', e);
+  }
+}
+
+export function getToolsForUser(userId: string): ToolIntegrationRow[] {
+  const rows = getAllToolRows();
+  return rows.filter(r => r.user_id === userId);
+}
+
+export function saveToolIntegration(
+  userId: string,
+  toolId: string,
+  config: Record<string, string>,
+  status: 'connected' | 'disconnected' | 'syncing' | 'error' = 'connected',
+  syncedMetrics?: any
+): ToolIntegrationRow {
+  const rows = getAllToolRows();
+  const now = new Date().toISOString();
+  const existingIndex = rows.findIndex(r => r.user_id === userId && r.tool_id === toolId);
+
+  // Encrypt config credentials
+  const encryptedConfig = encrypt(JSON.stringify(config));
+  const metricsJson = syncedMetrics ? JSON.stringify(syncedMetrics) : '';
+
+  let resultRow: ToolIntegrationRow;
+
+  if (existingIndex > -1) {
+    const existing = rows[existingIndex];
+    resultRow = {
+      ...existing,
+      status,
+      config_encrypted: encryptedConfig || existing.config_encrypted,
+      last_sync: now,
+      synced_metrics_json: metricsJson || existing.synced_metrics_json,
+      updated_at: now
+    };
+    rows[existingIndex] = resultRow;
+  } else {
+    const newId = typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : crypto.randomBytes(16).toString('hex');
+
+    resultRow = {
+      id: newId,
+      user_id: userId,
+      tool_id: toolId,
+      status,
+      config_encrypted: encryptedConfig,
+      last_sync: now,
+      synced_metrics_json: metricsJson,
+      created_at: now,
+      updated_at: now
+    };
+    rows.push(resultRow);
+  }
+
+  writeToolRows(rows);
+  return resultRow;
+}
+
+export function deleteToolIntegration(userId: string, toolId: string): boolean {
+  const rows = getAllToolRows();
+  const filtered = rows.filter(r => !(r.user_id === userId && r.tool_id === toolId));
+  if (filtered.length !== rows.length) {
+    writeToolRows(filtered);
+    return true;
+  }
+  return false;
+}
+

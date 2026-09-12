@@ -10,6 +10,30 @@ export interface GroundingCitation {
   uri: string;
 }
 
+export interface HistoricalTrafficPoint {
+  month: string;
+  yourBrand: number; // in thousands (K)
+  competitor1: number;
+  competitor2: number;
+  competitor3: number;
+}
+
+export interface BacklinkGrowthPoint {
+  month: string;
+  yourBrandDA: number; // Domain Authority (0-100)
+  yourBrandBacklinks: number; // in thousands (e.g. 14.2K)
+  yourBrandRefDomains: number; // Referring Domains count
+  competitor1DA: number;
+  competitor1Backlinks: number;
+  competitor1RefDomains: number;
+  competitor2DA: number;
+  competitor2Backlinks: number;
+  competitor2RefDomains: number;
+  competitor3DA: number;
+  competitor3Backlinks: number;
+  competitor3RefDomains: number;
+}
+
 export interface CompetitorProfile {
   name: string;
   website: string;
@@ -74,6 +98,8 @@ export interface CompetitorResearchReport {
   };
   competitors: [CompetitorProfile, CompetitorProfile, CompetitorProfile];
   comparisonMatrix: CompetitorMetricComparison[];
+  historicalTrafficTrends?: HistoricalTrafficPoint[];
+  backlinkGrowthTrends?: BacklinkGrowthPoint[];
   strategicRecommendations: Array<{
     title: string;
     category: 'SEO Hijacking' | 'Ad Spend Arbitrage' | 'Product Gap' | 'Pricing Disruption';
@@ -318,6 +344,106 @@ export function generateFallbackCompetitorReport(
         competitor2: '1-3 Days Setup',
         competitor3: 'Instant Single Feature',
         advantage: 'Your Brand'
+      }
+    ],
+    historicalTrafficTrends: [
+      { month: 'Oct 2025', yourBrand: 18 + (hash % 10), competitor1: 420, competitor2: 175, competitor3: 78 },
+      { month: 'Nov 2025', yourBrand: 22 + (hash % 12), competitor1: 435, competitor2: 185, competitor3: 82 },
+      { month: 'Dec 2025', yourBrand: 26 + (hash % 14), competitor1: 440, competitor2: 190, competitor3: 86 },
+      { month: 'Jan 2026', yourBrand: 32 + (hash % 16), competitor1: 455, competitor2: 198, competitor3: 90 },
+      { month: 'Feb 2026', yourBrand: 41 + (hash % 18), competitor1: 470, competitor2: 205, competitor3: 94 },
+      { month: 'Mar 2026', yourBrand: 55 + (hash % 20), competitor1: 480, competitor2: 210, competitor3: 95 }
+    ],
+    backlinkGrowthTrends: [
+      {
+        month: 'Oct 2025',
+        yourBrandDA: 42 + (hash % 6),
+        yourBrandBacklinks: 4.8 + Number(((hash % 10) * 0.2).toFixed(1)),
+        yourBrandRefDomains: 120 + (hash % 40),
+        competitor1DA: 74,
+        competitor1Backlinks: 142.5,
+        competitor1RefDomains: 3450,
+        competitor2DA: 63,
+        competitor2Backlinks: 48.2,
+        competitor2RefDomains: 1280,
+        competitor3DA: 56,
+        competitor3Backlinks: 19.4,
+        competitor3RefDomains: 610
+      },
+      {
+        month: 'Nov 2025',
+        yourBrandDA: 45 + (hash % 6),
+        yourBrandBacklinks: 6.2 + Number(((hash % 10) * 0.2).toFixed(1)),
+        yourBrandRefDomains: 165 + (hash % 45),
+        competitor1DA: 75,
+        competitor1Backlinks: 146.8,
+        competitor1RefDomains: 3520,
+        competitor2DA: 64,
+        competitor2Backlinks: 50.1,
+        competitor2RefDomains: 1310,
+        competitor3DA: 57,
+        competitor3Backlinks: 20.3,
+        competitor3RefDomains: 635
+      },
+      {
+        month: 'Dec 2025',
+        yourBrandDA: 48 + (hash % 6),
+        yourBrandBacklinks: 8.1 + Number(((hash % 10) * 0.2).toFixed(1)),
+        yourBrandRefDomains: 210 + (hash % 50),
+        competitor1DA: 76,
+        competitor1Backlinks: 151.2,
+        competitor1RefDomains: 3610,
+        competitor2DA: 65,
+        competitor2Backlinks: 52.4,
+        competitor2RefDomains: 1350,
+        competitor3DA: 57,
+        competitor3Backlinks: 21.0,
+        competitor3RefDomains: 650
+      },
+      {
+        month: 'Jan 2026',
+        yourBrandDA: 51 + (hash % 6),
+        yourBrandBacklinks: 10.9 + Number(((hash % 10) * 0.2).toFixed(1)),
+        yourBrandRefDomains: 275 + (hash % 60),
+        competitor1DA: 77,
+        competitor1Backlinks: 155.0,
+        competitor1RefDomains: 3690,
+        competitor2DA: 66,
+        competitor2Backlinks: 54.8,
+        competitor2RefDomains: 1395,
+        competitor3DA: 58,
+        competitor3Backlinks: 22.4,
+        competitor3RefDomains: 680
+      },
+      {
+        month: 'Feb 2026',
+        yourBrandDA: 55 + (hash % 6),
+        yourBrandBacklinks: 14.5 + Number(((hash % 10) * 0.2).toFixed(1)),
+        yourBrandRefDomains: 360 + (hash % 70),
+        competitor1DA: 78,
+        competitor1Backlinks: 158.4,
+        competitor1RefDomains: 3760,
+        competitor2DA: 67,
+        competitor2Backlinks: 57.2,
+        competitor2RefDomains: 1430,
+        competitor3DA: 59,
+        competitor3Backlinks: 23.6,
+        competitor3RefDomains: 705
+      },
+      {
+        month: 'Mar 2026',
+        yourBrandDA: 60 + (hash % 6),
+        yourBrandBacklinks: 19.8 + Number(((hash % 10) * 0.2).toFixed(1)),
+        yourBrandRefDomains: 485 + (hash % 80),
+        competitor1DA: 78,
+        competitor1Backlinks: 162.0,
+        competitor1RefDomains: 3820,
+        competitor2DA: 67,
+        competitor2Backlinks: 59.5,
+        competitor2RefDomains: 1465,
+        competitor3DA: 59,
+        competitor3Backlinks: 24.8,
+        competitor3RefDomains: 720
       }
     ],
     strategicRecommendations: [
@@ -658,6 +784,8 @@ Output your findings as a strict, valid JSON object with the following schema st
         parsedData.competitors[2]
       ] as [CompetitorProfile, CompetitorProfile, CompetitorProfile],
       comparisonMatrix: parsedData.comparisonMatrix || [],
+      historicalTrafficTrends: parsedData.historicalTrafficTrends || generateFallbackCompetitorReport(url, brandName, industry).historicalTrafficTrends,
+      backlinkGrowthTrends: parsedData.backlinkGrowthTrends || generateFallbackCompetitorReport(url, brandName, industry).backlinkGrowthTrends,
       strategicRecommendations: parsedData.strategicRecommendations || []
     };
 

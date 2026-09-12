@@ -9,7 +9,7 @@ import {
   Target, Compass, Award, TrendingUp, AlertTriangle, Lightbulb, Shield, 
   PlusCircle, Zap, CheckCircle2, XCircle, FileText, Play, Activity, 
   Clock, Sliders, ChevronRight, HelpCircle, Loader2, Globe, Search, ArrowRight,
-  Database, RefreshCw, Layers, Sparkles, Terminal, FileSpreadsheet, Check, Swords
+  Database, RefreshCw, Layers, Sparkles, Terminal, FileSpreadsheet, Check, Swords, Plug
 } from 'lucide-react';
 import { MarketingAnalysis } from '../types';
 import ThreeDStackVisualizer from './ThreeDStackVisualizer';
@@ -249,8 +249,32 @@ export default function DashboardOverview({
         </div>
       )}
 
-      {/* Integration Quick Access Banners: Competitor Research, Deterministic Non-LLM, Social Brand Audit, Agent-Reach, OmniRoute */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+      {/* Integration Quick Access Banners: Competitor Research, Deterministic Non-LLM, Social Brand Audit, Agent-Reach, OmniRoute, Integrations */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div 
+          onClick={() => onNavigateToTab && onNavigateToTab('integrations')}
+          className="glass-panel border border-cyan-400/50 hover:border-cyan-300 rounded-2xl p-4 shadow-xl transition-all cursor-pointer group bg-gradient-to-r from-cyan-500/20 via-blue-600/15 to-transparent flex items-center justify-between glow-cyan"
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full bg-cyan-400/30 text-cyan-200 font-mono text-[9px] font-bold uppercase border border-cyan-400/40">
+                ECOSYSTEM HUB
+              </span>
+              <span className="text-[10px] font-mono text-emerald-400 font-bold">● Multi-Channel Sync</span>
+            </div>
+            <h4 className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors flex items-center gap-2">
+              <Plug className="w-4 h-4 text-cyan-400" />
+              Connect GA4, WordPress & Tools
+            </h4>
+            <p className="text-xs text-slate-300">
+              Link Google Analytics, Search Console, WordPress REST, HubSpot, Shopify, Meta Ads & Zapier.
+            </p>
+          </div>
+          <div className="p-2.5 rounded-xl bg-cyan-500/30 border border-cyan-400/40 text-cyan-200 group-hover:scale-110 group-hover:bg-cyan-500/40 transition-all">
+            <ArrowRight className="w-4 h-4" />
+          </div>
+        </div>
+
         <div 
           onClick={() => onNavigateToTab && onNavigateToTab('competitor-research')}
           className="glass-panel border border-cyan-500/40 hover:border-cyan-400/80 rounded-2xl p-4 shadow-xl transition-all cursor-pointer group bg-gradient-to-r from-cyan-500/15 via-indigo-600/10 to-transparent flex items-center justify-between"

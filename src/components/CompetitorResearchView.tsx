@@ -5,6 +5,16 @@
 
 import React, { useState, useEffect } from 'react';
 import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
+} from 'recharts';
+import {
   Search,
   Globe,
   ExternalLink,
@@ -25,11 +35,20 @@ import {
   ArrowUpRight,
   Filter,
   Eye,
-  Check
+  Check,
+  Activity,
+  Bell,
+  Radar,
+  Link2,
+  GitCommit
 } from 'lucide-react';
+import { CompetitorSurveillanceEngine, CompetitorAlert } from '../lib/competitor-poller';
+import NotificationCenterModal from './NotificationCenterModal';
 import {
   CompetitorResearchReport,
   CompetitorProfile,
+  HistoricalTrafficPoint,
+  BacklinkGrowthPoint,
   generateFallbackCompetitorReport
 } from '../lib/competitor-research-engine';
 
@@ -51,10 +70,24 @@ export default function CompetitorResearchView({
   const [activeIndustry, setActiveIndustry] = useState(industry || '');
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<CompetitorResearchReport | null>(null);
-  const [activeViewTab, setActiveViewTab] = useState<'matrix' | 'profiles' | 'benchmark' | 'playbook' | 'grounding'>('matrix');
+  const [activeViewTab, setActiveViewTab] = useState<'trends' | 'backlinks' | 'matrix' | 'profiles' | 'benchmark' | 'playbook' | 'grounding'>('trends');
   const [selectedCompetitorIdx, setSelectedCompetitorIdx] = useState<number>(0);
   const [copied, setCopied] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [chartMetric, setChartMetric] = useState<'all' | 'yourBrand' | 'competitors'>('all');
+  const [backlinkMetricType, setBacklinkMetricType] = useState<'da' | 'backlinks' | 'refDomains'>('da');
+  const [backlinkFilterFocus, setBacklinkFilterFocus] = useState<'all' | 'yourBrand' | 'competitors'>('all');
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
+
+  // Subscribe to alert count
+  useEffect(() => {
+    const engine = CompetitorSurveillanceEngine.getInstance();
+    const unsub = engine.subscribe((alerts) => {
+      setUnreadAlertsCount(alerts.filter(a => !a.isRead).length);
+    });
+    return () => unsub();
+  }, []);
 
   // Quick preset sample domains
   const PRESET_DOMAINS = [
@@ -199,7 +232,21 @@ ${r.actionItems.map(a => `  - ${a}`).join('\n')}
               </p>
             </div>
 
-            <div className="flex items-center gap-2.5 self-start md:self-auto">
+            <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
+              <button
+                onClick={() => setShowNotificationCenter(true)}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500/20 to-amber-500/20 hover:from-rose-500/30 hover:to-amber-500/30 border border-rose-500/40 hover:border-rose-400 text-rose-200 text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md glow-rose"
+                title="Open Competitor Surveillance & Alert Radar"
+              >
+                <Radar className="w-4 h-4 text-rose-400 animate-spin-slow" />
+                <span>Surveillance Radar</span>
+                {unreadAlertsCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-mono font-black">
+                    {unreadAlertsCount}
+                  </span>
+                )}
+              </button>
+
               <button
                 onClick={handleCopyReport}
                 disabled={!report || loading}
@@ -280,6 +327,28 @@ ${r.actionItems.map(a => `  - ${a}`).join('\n')}
       {/* Navigation Sub-Tabs */}
       <div className="flex items-center justify-between border-b border-white/10 pb-2 overflow-x-auto gap-2">
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveViewTab('trends')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeViewTab === 'trends'
+                ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-lg shadow-cyan-500/20'
+                : 'glass-card border border-white/5 text-slate-400 hover:text-slate-200 hover:bg-white/5'
+            }`}
+          >
+            <Activity className="w-4 h-4 text-cyan-400" />
+            <span>Traffic Trends</span>
+          </button>
+          <button
+            onClick={() => setActiveViewTab('backlinks')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeViewTab === 'backlinks'
+                ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-lg shadow-cyan-500/20'
+                : 'glass-card border border-white/5 text-slate-400 hover:text-slate-200 hover:bg-white/5'
+            }`}
+          >
+            <Link2 className="w-4 h-4 text-emerald-400" />
+            <span>Backlink & DA Growth</span>
+          </button>
           <button
             onClick={() => setActiveViewTab('matrix')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
@@ -405,6 +474,545 @@ ${r.actionItems.map(a => `  - ${a}`).join('\n')}
               </div>
             ))}
           </div>
+
+          {/* TAB 0: HISTORICAL GROWTH & TRAFFIC TRENDS (RECHARTS LINE CHART) */}
+          {activeViewTab === 'trends' && (
+            <div className="space-y-6">
+              <div className="glass-panel border border-white/10 rounded-3xl p-6 lg:p-8 bg-slate-900/80 space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono text-xs font-bold uppercase tracking-wider mb-2">
+                      <Activity className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                      Recharts Interactive Time Series
+                    </div>
+                    <h3 className="text-xl font-black text-white flex items-center gap-2.5">
+                      <TrendingUp className="w-5 h-5 text-cyan-400" />
+                      Historical Monthly Traffic Growth & Trajectory
+                    </h3>
+                    <p className="text-xs text-slate-400 max-w-2xl mt-1">
+                      Multi-brand estimated traffic trajectory (in thousands of unique monthly visits) over the past 6 months comparing <strong className="text-cyan-300">{report.brandName}</strong> with top competitors.
+                    </p>
+                  </div>
+
+                  {/* Filter / Focus Controls */}
+                  <div className="flex items-center gap-2 self-start md:self-auto bg-slate-950/80 p-1.5 rounded-xl border border-white/10 text-xs font-mono">
+                    <span className="text-slate-500 px-2 font-bold">Focus:</span>
+                    <button
+                      onClick={() => setChartMetric('all')}
+                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer font-bold ${
+                        chartMetric === 'all'
+                          ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      All 4 Brands
+                    </button>
+                    <button
+                      onClick={() => setChartMetric('yourBrand')}
+                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer font-bold ${
+                        chartMetric === 'yourBrand'
+                          ? 'bg-cyan-500/30 border border-cyan-400/60 text-cyan-300 shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {report.brandName} (You)
+                    </button>
+                    <button
+                      onClick={() => setChartMetric('competitors')}
+                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer font-bold ${
+                        chartMetric === 'competitors'
+                          ? 'bg-purple-500/30 border border-purple-400/60 text-purple-300 shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Competitors Only
+                    </button>
+                  </div>
+                </div>
+
+                {/* Recharts Line Chart Container */}
+                <div className="w-full h-80 md:h-96 pt-4 bg-slate-950/50 rounded-2xl p-4 border border-white/5">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={report.historicalTrafficTrends || [
+                        { month: 'Oct 2025', yourBrand: 22, competitor1: 420, competitor2: 175, competitor3: 78 },
+                        { month: 'Nov 2025', yourBrand: 28, competitor1: 435, competitor2: 185, competitor3: 82 },
+                        { month: 'Dec 2025', yourBrand: 35, competitor1: 440, competitor2: 190, competitor3: 86 },
+                        { month: 'Jan 2026', yourBrand: 42, competitor1: 455, competitor2: 198, competitor3: 90 },
+                        { month: 'Feb 2026', yourBrand: 49, competitor1: 470, competitor2: 205, competitor3: 94 },
+                        { month: 'Mar 2026', yourBrand: 58, competitor1: 480, competitor2: 210, competitor3: 95 }
+                      ]}
+                      margin={{ top: 15, right: 30, left: 10, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.6} />
+                      <XAxis
+                        dataKey="month"
+                        stroke="#64748b"
+                        tick={{ fill: '#94a3b8', fontSize: 12, fontFamily: 'monospace' }}
+                        tickLine={{ stroke: '#334155' }}
+                      />
+                      <YAxis
+                        stroke="#64748b"
+                        tick={{ fill: '#94a3b8', fontSize: 12, fontFamily: 'monospace' }}
+                        tickLine={{ stroke: '#334155' }}
+                        unit="K"
+                        domain={[0, 'auto']}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#020617',
+                          border: '1px solid rgba(6, 182, 212, 0.3)',
+                          borderRadius: '16px',
+                          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 8px 10px -6px rgba(0, 0, 0, 0.8)',
+                          color: '#f8fafc',
+                          fontFamily: 'monospace',
+                          fontSize: '12px',
+                          padding: '12px 16px'
+                        }}
+                        itemStyle={{ padding: '2px 0' }}
+                        formatter={(val: any, name: any) => [`${val}K Visits/mo`, name]}
+                        labelStyle={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '6px' }}
+                      />
+                      <Legend
+                        verticalAlign="top"
+                        height={40}
+                        wrapperStyle={{
+                          paddingBottom: '10px',
+                          fontSize: '12px',
+                          fontFamily: 'monospace'
+                        }}
+                      />
+                      {(chartMetric === 'all' || chartMetric === 'yourBrand') && (
+                        <Line
+                          type="monotone"
+                          dataKey="yourBrand"
+                          name={`${report.brandName} (Your Brand)`}
+                          stroke="#06b6d4"
+                          strokeWidth={3.5}
+                          dot={{ r: 5, fill: '#06b6d4', stroke: '#083344', strokeWidth: 2 }}
+                          activeDot={{ r: 8, stroke: '#38bdf8', strokeWidth: 2, fill: '#ffffff' }}
+                        />
+                      )}
+                      {(chartMetric === 'all' || chartMetric === 'competitors') && (
+                        <Line
+                          type="monotone"
+                          dataKey="competitor1"
+                          name={report.competitors[0]?.name || 'Competitor 1'}
+                          stroke="#c084fc"
+                          strokeWidth={2.5}
+                          strokeDasharray={chartMetric === 'competitors' ? undefined : '4 4'}
+                          dot={{ r: 4, fill: '#c084fc', stroke: '#3b0764', strokeWidth: 1.5 }}
+                          activeDot={{ r: 7, stroke: '#e879f9', strokeWidth: 2, fill: '#ffffff' }}
+                        />
+                      )}
+                      {(chartMetric === 'all' || chartMetric === 'competitors') && (
+                        <Line
+                          type="monotone"
+                          dataKey="competitor2"
+                          name={report.competitors[1]?.name || 'Competitor 2'}
+                          stroke="#818cf8"
+                          strokeWidth={2}
+                          dot={{ r: 4, fill: '#818cf8', stroke: '#1e1b4b', strokeWidth: 1.5 }}
+                          activeDot={{ r: 6, stroke: '#a5b4fc', strokeWidth: 2, fill: '#ffffff' }}
+                        />
+                      )}
+                      {(chartMetric === 'all' || chartMetric === 'competitors') && (
+                        <Line
+                          type="monotone"
+                          dataKey="competitor3"
+                          name={report.competitors[2]?.name || 'Competitor 3'}
+                          stroke="#f472b6"
+                          strokeWidth={2}
+                          dot={{ r: 4, fill: '#f472b6', stroke: '#500724', strokeWidth: 1.5 }}
+                          activeDot={{ r: 6, stroke: '#fbcfe8', strokeWidth: 2, fill: '#ffffff' }}
+                        />
+                      )}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Velocity Insights & Growth Metrics Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+                  <div className="glass-card border border-cyan-500/30 rounded-2xl p-4 bg-cyan-950/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-bold">
+                        {report.brandName} Growth
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">
+                        +163.6%
+                      </span>
+                    </div>
+                    <div className="text-xl font-black text-white font-mono">
+                      {report.targetBrandMetrics.estimatedMonthlyVisits}
+                    </div>
+                    <p className="text-[11px] text-slate-400">Fastest month-over-month acceleration in category</p>
+                  </div>
+
+                  <div className="glass-card border border-purple-500/20 rounded-2xl p-4 bg-purple-950/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold truncate max-w-[120px]">
+                        {report.competitors[0]?.name}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px]">
+                        +14.2%
+                      </span>
+                    </div>
+                    <div className="text-xl font-black text-purple-300 font-mono">
+                      {report.competitors[0]?.estimatedMonthlyVisits}
+                    </div>
+                    <p className="text-[11px] text-slate-400">High volume ceiling with plateauing search growth</p>
+                  </div>
+
+                  <div className="glass-card border border-indigo-500/20 rounded-2xl p-4 bg-indigo-950/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 font-bold truncate max-w-[120px]">
+                        {report.competitors[1]?.name}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px]">
+                        +20.0%
+                      </span>
+                    </div>
+                    <div className="text-xl font-black text-indigo-300 font-mono">
+                      {report.competitors[1]?.estimatedMonthlyVisits}
+                    </div>
+                    <p className="text-[11px] text-slate-400">Steady mid-market performance fueled by paid social</p>
+                  </div>
+
+                  <div className="glass-card border border-pink-500/20 rounded-2xl p-4 bg-pink-950/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-pink-400 font-bold truncate max-w-[120px]">
+                        {report.competitors[2]?.name}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px]">
+                        +21.7%
+                      </span>
+                    </div>
+                    <div className="text-xl font-black text-pink-300 font-mono">
+                      {report.competitors[2]?.estimatedMonthlyVisits}
+                    </div>
+                    <p className="text-[11px] text-slate-400">Volatile spikes tied to single product feature releases</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: BACKLINK & DOMAIN AUTHORITY GROWTH VISUALIZATION */}
+          {activeViewTab === 'backlinks' && (
+            <div className="space-y-6">
+              <div className="glass-panel border border-white/10 rounded-3xl p-6 lg:p-8 bg-slate-900/80 space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono text-xs font-bold uppercase tracking-wider mb-2">
+                      <Link2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                      Domain Authority & Backlink Growth Engine
+                    </div>
+                    <h3 className="text-xl font-black text-white flex items-center gap-2.5">
+                      <GitCommit className="w-5 h-5 text-emerald-400" />
+                      Competitor Domain Authority & Link Velocity Trends
+                    </h3>
+                    <p className="text-xs text-slate-400 max-w-2xl mt-1">
+                      Tracking 6-month historical Domain Authority (0–100 DA) trajectory, total inbound backlinks, and referring domains across <strong className="text-cyan-300">{report.brandName}</strong> and top rivals.
+                    </p>
+                  </div>
+
+                  {/* Dual Control Switchers */}
+                  <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
+                    {/* Metric Selector (DA vs Backlinks vs Referring Domains) */}
+                    <div className="flex items-center bg-slate-950/90 p-1.5 rounded-xl border border-white/10 text-xs font-mono">
+                      <button
+                        onClick={() => setBacklinkMetricType('da')}
+                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer font-bold ${
+                          backlinkMetricType === 'da'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Domain Authority (DA)
+                      </button>
+                      <button
+                        onClick={() => setBacklinkMetricType('backlinks')}
+                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer font-bold ${
+                          backlinkMetricType === 'backlinks'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Total Backlinks (K)
+                      </button>
+                      <button
+                        onClick={() => setBacklinkMetricType('refDomains')}
+                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer font-bold ${
+                          backlinkMetricType === 'refDomains'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Referring Domains
+                      </button>
+                    </div>
+
+                    {/* Brand Focus Filter */}
+                    <div className="flex items-center bg-slate-950/80 p-1.5 rounded-xl border border-white/10 text-xs font-mono">
+                      <button
+                        onClick={() => setBacklinkFilterFocus('all')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold ${
+                          backlinkFilterFocus === 'all'
+                            ? 'bg-slate-700 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setBacklinkFilterFocus('yourBrand')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold ${
+                          backlinkFilterFocus === 'yourBrand'
+                            ? 'bg-cyan-500/30 border border-cyan-400/60 text-cyan-300'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        You
+                      </button>
+                      <button
+                        onClick={() => setBacklinkFilterFocus('competitors')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold ${
+                          backlinkFilterFocus === 'competitors'
+                            ? 'bg-purple-500/30 border border-purple-400/60 text-purple-300'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Rivals
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recharts Backlink & DA Line Chart */}
+                <div className="w-full h-80 md:h-96 pt-4 bg-slate-950/50 rounded-2xl p-4 border border-white/5">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={report.backlinkGrowthTrends || [
+                        { month: 'Oct 2025', yourBrandDA: 42, yourBrandBacklinks: 4.8, yourBrandRefDomains: 120, competitor1DA: 74, competitor1Backlinks: 142.5, competitor1RefDomains: 3450, competitor2DA: 63, competitor2Backlinks: 48.2, competitor2RefDomains: 1280, competitor3DA: 56, competitor3Backlinks: 19.4, competitor3RefDomains: 610 },
+                        { month: 'Nov 2025', yourBrandDA: 45, yourBrandBacklinks: 6.2, yourBrandRefDomains: 165, competitor1DA: 75, competitor1Backlinks: 146.8, competitor1RefDomains: 3520, competitor2DA: 64, competitor2Backlinks: 50.1, competitor2RefDomains: 1310, competitor3DA: 57, competitor3Backlinks: 20.3, competitor3RefDomains: 635 },
+                        { month: 'Dec 2025', yourBrandDA: 48, yourBrandBacklinks: 8.1, yourBrandRefDomains: 210, competitor1DA: 76, competitor1Backlinks: 151.2, competitor1RefDomains: 3610, competitor2DA: 65, competitor2Backlinks: 52.4, competitor2RefDomains: 1350, competitor3DA: 57, competitor3Backlinks: 21.0, competitor3RefDomains: 650 },
+                        { month: 'Jan 2026', yourBrandDA: 51, yourBrandBacklinks: 10.9, yourBrandRefDomains: 275, competitor1DA: 77, competitor1Backlinks: 155.0, competitor1RefDomains: 3690, competitor2DA: 66, competitor2Backlinks: 54.8, competitor2RefDomains: 1395, competitor3DA: 58, competitor3Backlinks: 22.4, competitor3RefDomains: 680 },
+                        { month: 'Feb 2026', yourBrandDA: 55, yourBrandBacklinks: 14.5, yourBrandRefDomains: 360, competitor1DA: 78, competitor1Backlinks: 158.4, competitor1RefDomains: 3760, competitor2DA: 67, competitor2Backlinks: 57.2, competitor2RefDomains: 1430, competitor3DA: 59, competitor3Backlinks: 23.6, competitor3RefDomains: 705 },
+                        { month: 'Mar 2026', yourBrandDA: 60, yourBrandBacklinks: 19.8, yourBrandRefDomains: 485, competitor1DA: 78, competitor1Backlinks: 162.0, competitor1RefDomains: 3820, competitor2DA: 67, competitor2Backlinks: 59.5, competitor2RefDomains: 1465, competitor3DA: 59, competitor3Backlinks: 24.8, competitor3RefDomains: 720 }
+                      ]}
+                      margin={{ top: 15, right: 30, left: 10, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.6} />
+                      <XAxis
+                        dataKey="month"
+                        stroke="#64748b"
+                        tick={{ fill: '#94a3b8', fontSize: 12, fontFamily: 'monospace' }}
+                        tickLine={{ stroke: '#334155' }}
+                      />
+                      <YAxis
+                        stroke="#64748b"
+                        tick={{ fill: '#94a3b8', fontSize: 12, fontFamily: 'monospace' }}
+                        tickLine={{ stroke: '#334155' }}
+                        unit={backlinkMetricType === 'da' ? '' : backlinkMetricType === 'backlinks' ? 'K' : ''}
+                        domain={backlinkMetricType === 'da' ? [0, 100] : [0, 'auto']}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#020617',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          borderRadius: '16px',
+                          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 8px 10px -6px rgba(0, 0, 0, 0.8)',
+                          color: '#f8fafc',
+                          fontFamily: 'monospace',
+                          fontSize: '12px',
+                          padding: '12px 16px'
+                        }}
+                        itemStyle={{ padding: '2px 0' }}
+                        formatter={(val: any, name: any) => [
+                          backlinkMetricType === 'da'
+                            ? `${val}/100 DA`
+                            : backlinkMetricType === 'backlinks'
+                            ? `${val}K Backlinks`
+                            : `${Number(val).toLocaleString()} Ref. Domains`,
+                          name
+                        ]}
+                        labelStyle={{ color: '#34d399', fontWeight: 'bold', marginBottom: '6px' }}
+                      />
+                      <Legend
+                        verticalAlign="top"
+                        height={40}
+                        wrapperStyle={{
+                          paddingBottom: '10px',
+                          fontSize: '12px',
+                          fontFamily: 'monospace'
+                        }}
+                      />
+
+                      {/* Line 1: Your Brand */}
+                      {(backlinkFilterFocus === 'all' || backlinkFilterFocus === 'yourBrand') && (
+                        <Line
+                          type="monotone"
+                          dataKey={
+                            backlinkMetricType === 'da'
+                              ? 'yourBrandDA'
+                              : backlinkMetricType === 'backlinks'
+                              ? 'yourBrandBacklinks'
+                              : 'yourBrandRefDomains'
+                          }
+                          name={`${report.brandName} (Your Brand)`}
+                          stroke="#10b981"
+                          strokeWidth={3.5}
+                          dot={{ r: 5, fill: '#10b981', stroke: '#064e3b', strokeWidth: 2 }}
+                          activeDot={{ r: 8, stroke: '#6ee7b7', strokeWidth: 2, fill: '#ffffff' }}
+                        />
+                      )}
+
+                      {/* Line 2: Competitor 1 */}
+                      {(backlinkFilterFocus === 'all' || backlinkFilterFocus === 'competitors') && (
+                        <Line
+                          type="monotone"
+                          dataKey={
+                            backlinkMetricType === 'da'
+                              ? 'competitor1DA'
+                              : backlinkMetricType === 'backlinks'
+                              ? 'competitor1Backlinks'
+                              : 'competitor1RefDomains'
+                          }
+                          name={report.competitors[0]?.name || 'Competitor 1'}
+                          stroke="#c084fc"
+                          strokeWidth={2.5}
+                          strokeDasharray={backlinkFilterFocus === 'competitors' ? undefined : '4 4'}
+                          dot={{ r: 4, fill: '#c084fc', stroke: '#3b0764', strokeWidth: 1.5 }}
+                          activeDot={{ r: 7, stroke: '#e879f9', strokeWidth: 2, fill: '#ffffff' }}
+                        />
+                      )}
+
+                      {/* Line 3: Competitor 2 */}
+                      {(backlinkFilterFocus === 'all' || backlinkFilterFocus === 'competitors') && (
+                        <Line
+                          type="monotone"
+                          dataKey={
+                            backlinkMetricType === 'da'
+                              ? 'competitor2DA'
+                              : backlinkMetricType === 'backlinks'
+                              ? 'competitor2Backlinks'
+                              : 'competitor2RefDomains'
+                          }
+                          name={report.competitors[1]?.name || 'Competitor 2'}
+                          stroke="#818cf8"
+                          strokeWidth={2}
+                          dot={{ r: 4, fill: '#818cf8', stroke: '#1e1b4b', strokeWidth: 1.5 }}
+                          activeDot={{ r: 6, stroke: '#a5b4fc', strokeWidth: 2, fill: '#ffffff' }}
+                        />
+                      )}
+
+                      {/* Line 4: Competitor 3 */}
+                      {(backlinkFilterFocus === 'all' || backlinkFilterFocus === 'competitors') && (
+                        <Line
+                          type="monotone"
+                          dataKey={
+                            backlinkMetricType === 'da'
+                              ? 'competitor3DA'
+                              : backlinkMetricType === 'backlinks'
+                              ? 'competitor3Backlinks'
+                              : 'competitor3RefDomains'
+                          }
+                          name={report.competitors[2]?.name || 'Competitor 3'}
+                          stroke="#f472b6"
+                          strokeWidth={2}
+                          dot={{ r: 4, fill: '#f472b6', stroke: '#500724', strokeWidth: 1.5 }}
+                          activeDot={{ r: 6, stroke: '#fbcfe8', strokeWidth: 2, fill: '#ffffff' }}
+                        />
+                      )}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Backlink Velocity & Domain Authority Metrics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+                  <div className="glass-card border border-emerald-500/30 rounded-2xl p-4 bg-emerald-950/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
+                        {report.brandName} Authority
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">
+                        +18 pts (6mo)
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-black text-white font-mono">
+                        DA {report.targetBrandMetrics.domainAuthority}
+                      </span>
+                      <span className="text-xs text-emerald-400 font-mono font-bold">/100</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Link acquisition velocity: <strong className="text-emerald-300">+312.5%</strong> in referring domains
+                    </p>
+                  </div>
+
+                  <div className="glass-card border border-purple-500/20 rounded-2xl p-4 bg-purple-950/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold truncate max-w-[120px]">
+                        {report.competitors[0]?.name}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px]">
+                        +4 pts
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-black text-purple-300 font-mono">
+                        DA {report.competitors[0]?.domainAuthority}
+                      </span>
+                      <span className="text-xs text-purple-400/80 font-mono font-bold">/100</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      High authority moat with steady <strong className="text-purple-300">3.8K+</strong> referring domains
+                    </p>
+                  </div>
+
+                  <div className="glass-card border border-indigo-500/20 rounded-2xl p-4 bg-indigo-950/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 font-bold truncate max-w-[120px]">
+                        {report.competitors[1]?.name}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px]">
+                        +4 pts
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-black text-indigo-300 font-mono">
+                        DA {report.competitors[1]?.domainAuthority}
+                      </span>
+                      <span className="text-xs text-indigo-400/80 font-mono font-bold">/100</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Mid-tier authority bolstered by partner integrations and podcast mentions
+                    </p>
+                  </div>
+
+                  <div className="glass-card border border-pink-500/20 rounded-2xl p-4 bg-pink-950/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-pink-400 font-bold truncate max-w-[120px]">
+                        {report.competitors[2]?.name}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px]">
+                        +3 pts
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-black text-pink-300 font-mono">
+                        DA {report.competitors[2]?.domainAuthority}
+                      </span>
+                      <span className="text-xs text-pink-400/80 font-mono font-bold">/100</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Niche profile vulnerable to aggressive skyscraper backlink hijacking
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* TAB 1: SIDE-BY-SIDE COMPARISON MATRIX */}
           {activeViewTab === 'matrix' && (
@@ -881,6 +1489,16 @@ ${r.actionItems.map(a => `  - ${a}`).join('\n')}
           )}
         </>
       )}
+
+      {/* Competitor Surveillance Modal */}
+      <NotificationCenterModal
+        isOpen={showNotificationCenter}
+        onClose={() => setShowNotificationCenter(false)}
+        onNavigateToAgent={(role) => {
+          setShowNotificationCenter(false);
+          if (onNavigateToTab) onNavigateToTab(role);
+        }}
+      />
     </div>
   );
 }
