@@ -768,7 +768,7 @@ app.post('/api/social/reply-generator', async (req, res) => {
       `;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.8-flash',
         contents: prompt
       });
 
@@ -787,6 +787,34 @@ app.post('/api/social/reply-generator', async (req, res) => {
     });
   }
 });
+
+// ============================================================================
+// COMPETITOR RESEARCH & GOOGLE SEARCH GROUNDING ENDPOINTS
+// ============================================================================
+
+app.post('/api/competitor/research', async (req, res) => {
+  try {
+    const { url, brandName, industry, customNotes } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ error: 'Website URL is required for competitor research.' });
+    }
+
+    const { executeCompetitorResearchWithGrounding } = require('./src/lib/competitor-research-engine');
+    const report = await executeCompetitorResearchWithGrounding(
+      url,
+      brandName,
+      industry,
+      process.env.GEMINI_API_KEY
+    );
+
+    res.json({ success: true, report });
+  } catch (err: any) {
+    console.error('[COMPETITOR RESEARCH ERROR]', err);
+    res.status(500).json({ error: err.message || 'Failed to execute competitor research.' });
+  }
+});
+
 
 // Setup Vite Dev Middleware / Production static file serving
 async function bootstrapServer() {

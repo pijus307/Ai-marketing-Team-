@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, Shield, Search, FileText, Share2, DollarSign, Target, Mail, 
-  MessageSquare, Globe, ArrowRight, RefreshCw, AlertCircle, Laptop, Landmark, ChevronRight, Layers, Zap, Network, Sliders, Code2, Terminal, Command, Cpu, CheckCircle2, Activity, Menu, X, Radio
+  MessageSquare, Globe, ArrowRight, RefreshCw, AlertCircle, Laptop, Landmark, ChevronRight, Layers, Zap, Network, Sliders, Code2, Terminal, Command, Cpu, CheckCircle2, Activity, Menu, X, Radio, Swords
 } from 'lucide-react';
 
 import { MarketingAnalysis, RunStep } from './types';
@@ -33,6 +33,7 @@ import AgentReachView from './components/AgentReachView';
 import OmniRouteView from './components/OmniRouteView';
 import AdvancedAgentsSuiteView from './components/AdvancedAgentsSuiteView';
 import DeterministicAgentsSuiteView from './components/DeterministicAgentsSuiteView';
+import CompetitorResearchView from './components/CompetitorResearchView';
 
 const DEFAULT_STEPS: RunStep[] = [
   { agentId: 'ceo', agentName: 'Sophia Vance', status: 'pending', message: 'Ready to establish positioning & key business growth objectives.' },
@@ -69,7 +70,7 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Active Desk Navigation
-  const [activeTab, setActiveTab] = useState<'ceo' | 'seo' | 'content' | 'social' | 'social-audit' | 'ads' | 'leadgen' | 'email' | 'chat' | 'workforce' | 'publish' | 'ai-providers' | 'workspace' | 'prompts' | 'discovery' | 'agentreach' | 'omniroute' | 'advanced-agents' | 'deterministic-agents'>('ceo');
+  const [activeTab, setActiveTab] = useState<'ceo' | 'seo' | 'content' | 'social' | 'social-audit' | 'ads' | 'leadgen' | 'email' | 'chat' | 'workforce' | 'publish' | 'ai-providers' | 'workspace' | 'prompts' | 'discovery' | 'agentreach' | 'omniroute' | 'advanced-agents' | 'deterministic-agents' | 'competitor-research'>('ceo');
 
   // Load simulated step progress during generation
   useEffect(() => {
@@ -289,6 +290,15 @@ export default function App() {
         return (
           <DeterministicAgentsSuiteView
             onboardedUrl={url}
+            brandName={analysisResult?.ceo?.brandName}
+            industry={industry || analysisResult?.ceo?.industry}
+            onNavigateToTab={(tabId) => setActiveTab(tabId as any)}
+          />
+        );
+      case 'competitor-research':
+        return (
+          <CompetitorResearchView
+            onboardedUrl={url || analysisResult?.url}
             brandName={analysisResult?.ceo?.brandName}
             industry={industry || analysisResult?.ceo?.industry}
             onNavigateToTab={(tabId) => setActiveTab(tabId as any)}
@@ -928,6 +938,24 @@ export default function App() {
                     </div>
                     <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-400/40 font-mono font-bold tracking-wider">
                       ZERO-LLM
+                    </span>
+                  </button>
+
+                  {/* Competitor Research (Google Search Grounded) */}
+                  <button
+                    onClick={() => { setActiveTab('competitor-research'); setMobileSidebarOpen(false); }}
+                    className={`w-full text-left px-3.5 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-between border cursor-pointer mt-1.5 ${
+                      activeTab === 'competitor-research'
+                        ? 'bg-gradient-to-r from-cyan-500/30 via-indigo-600/30 to-purple-600/30 border-cyan-400 text-white shadow-xl glow-cyan'
+                        : 'glass-card border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Swords className="w-4 h-4 text-cyan-400" />
+                      <span>Competitor Research</span>
+                    </div>
+                    <span className="text-[9px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded-full border border-cyan-400/40 font-mono font-bold tracking-wider">
+                      SEARCH AI
                     </span>
                   </button>
 
