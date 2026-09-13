@@ -71,10 +71,10 @@ export default function AutoPublishConsole({ analysis }: AutoPublishConsoleProps
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: analysis.url,
-          industry: analysis.ceo.industry || '',
-          companyDescription: analysis.ceo.positioning || '',
-          customGoals: analysis.email.sequenceGoal || ''
+          url: analysis?.url || '',
+          industry: analysis?.ceo?.industry || '',
+          companyDescription: analysis?.ceo?.positioning || '',
+          customGoals: analysis?.email?.sequenceGoal || ''
         })
       });
       if (res.ok) {

@@ -6,6 +6,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 export interface AIProviderRow {
   id: string;
@@ -75,18 +76,32 @@ export function maskKey(apiKeyEncrypted: string): string {
   return '************' + decrypted.slice(-4);
 }
 
-const DB_PATH = path.join(process.cwd(), 'data', 'ai_providers_db.json');
+// In serverless environments (e.g. Vercel, Netlify, AWS Lambda), root is read-only
+const isServerless = !!(process.env.VERCEL || process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const BASE_DATA_DIR = isServerless 
+  ? path.join(os.tmpdir(), 'marketing_os_data')
+  : path.join(process.cwd(), 'data');
+
+const DB_PATH = path.join(BASE_DATA_DIR, 'ai_providers_db.json');
+
+// In-memory fallback caches
+let memoryProviders: AIProviderRow[] = [];
+let memoryTools: ToolIntegrationRow[] = [];
 
 /**
  * Ensures database folder and file exist
  */
 function ensureDb() {
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(DB_PATH)) {
-    fs.writeFileSync(DB_PATH, JSON.stringify([], null, 2), 'utf8');
+  try {
+    const dir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(DB_PATH)) {
+      fs.writeFileSync(DB_PATH, JSON.stringify([], null, 2), 'utf8');
+    }
+  } catch (e) {
+    // Read-only or restricted filesystem: continue in memory
   }
 }
 
@@ -96,23 +111,29 @@ function ensureDb() {
 export function getAllRows(): AIProviderRow[] {
   ensureDb();
   try {
-    const data = fs.readFileSync(DB_PATH, 'utf8');
-    return JSON.parse(data) as AIProviderRow[];
+    if (fs.existsSync(DB_PATH)) {
+      const data = fs.readFileSync(DB_PATH, 'utf8');
+      const parsed = JSON.parse(data) as AIProviderRow[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        memoryProviders = parsed;
+      }
+    }
   } catch (e) {
-    console.error('Failed to read db file', e);
-    return [];
+    // Read error fallback
   }
+  return memoryProviders;
 }
 
 /**
  * Write all rows back to database file
  */
 export function writeRows(rows: AIProviderRow[]) {
+  memoryProviders = rows;
   ensureDb();
   try {
     fs.writeFileSync(DB_PATH, JSON.stringify(rows, null, 2), 'utf8');
   } catch (e) {
-    console.error('Failed to write to db file', e);
+    // Write error fallback
   }
 }
 
@@ -216,35 +237,45 @@ export interface ToolIntegrationRow {
   updated_at: string;
 }
 
-const TOOLS_DB_PATH = path.join(process.cwd(), 'data', 'tool_integrations_db.json');
+const TOOLS_DB_PATH = path.join(BASE_DATA_DIR, 'tool_integrations_db.json');
 
 function ensureToolsDb() {
-  const dir = path.dirname(TOOLS_DB_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(TOOLS_DB_PATH)) {
-    fs.writeFileSync(TOOLS_DB_PATH, JSON.stringify([], null, 2), 'utf8');
+  try {
+    const dir = path.dirname(TOOLS_DB_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(TOOLS_DB_PATH)) {
+      fs.writeFileSync(TOOLS_DB_PATH, JSON.stringify([], null, 2), 'utf8');
+    }
+  } catch (e) {
+    // Read-only filesystem fallback
   }
 }
 
 export function getAllToolRows(): ToolIntegrationRow[] {
   ensureToolsDb();
   try {
-    const data = fs.readFileSync(TOOLS_DB_PATH, 'utf8');
-    return JSON.parse(data) as ToolIntegrationRow[];
+    if (fs.existsSync(TOOLS_DB_PATH)) {
+      const data = fs.readFileSync(TOOLS_DB_PATH, 'utf8');
+      const parsed = JSON.parse(data) as ToolIntegrationRow[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        memoryTools = parsed;
+      }
+    }
   } catch (e) {
-    console.error('Failed to read tools db file', e);
-    return [];
+    // Read error fallback
   }
+  return memoryTools;
 }
 
 export function writeToolRows(rows: ToolIntegrationRow[]) {
+  memoryTools = rows;
   ensureToolsDb();
   try {
     fs.writeFileSync(TOOLS_DB_PATH, JSON.stringify(rows, null, 2), 'utf8');
   } catch (e) {
-    console.error('Failed to write to tools db file', e);
+    // Write error fallback
   }
 }
 

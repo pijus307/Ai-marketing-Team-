@@ -5,7 +5,7 @@
 
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
+import fs from 'fs';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import dotenv from 'dotenv';
 import { 
@@ -30,6 +30,36 @@ const PORT = 3000;
 
 // Enable JSON middleware with generous body limits for rich payloads
 app.use(express.json({ limit: '10mb' }));
+
+// CORS middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// Normalize URL for serverless environments where /api might be stripped
+app.use((req, res, next) => {
+  if (req.url && !req.url.startsWith('/api') && (
+    req.url.startsWith('/marketing') ||
+    req.url.startsWith('/agents') ||
+    req.url.startsWith('/ai-providers') ||
+    req.url.startsWith('/execution') ||
+    req.url.startsWith('/social') ||
+    req.url.startsWith('/competitor') ||
+    req.url.startsWith('/integrations') ||
+    req.url.startsWith('/health') ||
+    req.url.startsWith('/agent-reach') ||
+    req.url.startsWith('/omniroute')
+  )) {
+    req.url = '/api' + req.url;
+  }
+  next();
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -1068,7 +1098,8 @@ app.post('/api/integrations/wordpress/publish', async (req, res) => {
 
 // Setup Vite Dev Middleware / Production static file serving
 async function bootstrapServer() {
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL && !process.env.NETLIFY) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -1077,11 +1108,13 @@ async function bootstrapServer() {
     console.log('Vite middleware mounted in development mode.');
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-    console.log('Serving production static assets from /dist.');
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+      console.log('Serving production static assets from /dist.');
+    }
   }
 
   app.listen(PORT, '0.0.0.0', () => {
@@ -1089,8 +1122,9 @@ async function bootstrapServer() {
   });
 }
 
-// In standard runtime, boot the server
-if (process.env.VERCEL !== '1' && !process.env.NETLIFY) {
+// In standard runtime, boot the server if executed directly
+const isDirectExecution = !process.env.VERCEL && !process.env.NETLIFY && !process.env.AWS_LAMBDA_FUNCTION_NAME;
+if (isDirectExecution && (process.env.NODE_ENV !== 'production' || process.argv[1]?.includes('server'))) {
   bootstrapServer();
 }
 

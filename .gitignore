@@ -53,3 +53,5 @@ data/
 # Misc
 *.pem
 *.key
+
+.vercel

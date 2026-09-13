@@ -42,7 +42,15 @@ export default function DashboardOverview({
   onNavigateToTab 
 }: DashboardOverviewProps) {
   
-  const report = analysisResult.ceo;
+  const report = analysisResult?.ceo || {
+    brandName: 'Brand',
+    industry: 'Technology & Marketing',
+    positioning: 'Autonomous growth operating system',
+    targetAudience: 'Growth Leaders',
+    valuePropositions: ['AI-first automation'],
+    swotAnalysis: { strengths: [], weaknesses: [], opportunities: [], threats: [] },
+    keyGrowthObjectives: ['Scale acquisition channels', 'Optimize SEO footprint']
+  };
 
   // --- Dynamic Dashboard State ---
   const [budget, setBudget] = useState<number>(5000);

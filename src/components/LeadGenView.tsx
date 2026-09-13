@@ -73,7 +73,7 @@ export default function LeadGenView({ report }: LeadGenViewProps) {
                   </span>
                   <span className="text-xs font-bold text-zinc-800">{step}</span>
                 </div>
-                {i < report.funnelSteps.length - 1 && (
+                {i < (report.funnelSteps?.length || 0) - 1 && (
                   <ArrowRight className="w-5 h-5 text-zinc-500 rotate-90 md:rotate-0 flex-shrink-0 py-1" />
                 )}
               </div>

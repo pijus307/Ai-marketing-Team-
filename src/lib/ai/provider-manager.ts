@@ -137,7 +137,8 @@ export class AIProviderManager {
       if (dbRecord && serverDb) {
         apiKey = serverDb.decrypt(dbRecord.api_key);
       } else if (isGemini) {
-        apiKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+        apiKey = (typeof process !== 'undefined' && (process.env?.GEMINI_API_KEY || process.env?.VITE_GEMINI_API_KEY)) || 
+                 (typeof globalThis !== 'undefined' && (globalThis as any)?.__ENV__?.GEMINI_API_KEY) || '';
       }
 
       if (!apiKey && providerId !== 'ollama') {

@@ -37,6 +37,7 @@ import CompetitorResearchView from './components/CompetitorResearchView';
 import IntegrationsHubView from './components/IntegrationsHubView';
 import NotificationBell from './components/NotificationBell';
 import NotificationCenterModal from './components/NotificationCenterModal';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const DEFAULT_STEPS: RunStep[] = [
   { agentId: 'ceo', agentName: 'Sophia Vance', status: 'pending', message: 'Ready to establish positioning & key business growth objectives.' },
@@ -167,11 +168,26 @@ export default function App() {
       });
 
       if (!response.ok) {
-        const errJson = await response.json();
-        throw new Error(errJson.error || 'Marketing orchestration failed.');
+        let errMessage = `Server error (${response.status})`;
+        try {
+          const errJson = await response.json();
+          errMessage = errJson.error || errJson.message || errMessage;
+        } catch {
+          const rawText = await response.text().catch(() => '');
+          if (rawText && !rawText.includes('<html')) {
+            errMessage = rawText;
+          }
+        }
+        throw new Error(errMessage);
       }
 
-      const campaignData = await response.json();
+      let campaignData;
+      try {
+        campaignData = await response.json();
+      } catch (e) {
+        const rawText = await response.text().catch(() => '');
+        throw new Error(rawText ? `Failed to parse campaign response: ${rawText.slice(0, 100)}` : 'Invalid response from server.');
+      }
       setAnalysisResult(campaignData);
 
     } catch (err: any) {
@@ -1159,7 +1175,12 @@ export default function App() {
                     exit={{ opacity: 0, y: -12 }}
                     transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                   >
-                    {renderActiveDesk()}
+                    <ErrorBoundary 
+                      fallbackTitle={`Desk ${activeTab.toUpperCase()} Loading Protected`}
+                      onReset={() => setActiveTab('ceo')}
+                    >
+                      {renderActiveDesk()}
+                    </ErrorBoundary>
                   </motion.div>
                 </AnimatePresence>
               </div>
